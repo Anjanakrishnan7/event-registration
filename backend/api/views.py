@@ -5,7 +5,7 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
-from django.db.models import Q
+from django.db.models import Q, Count, Exists, OuterRef, Value, BooleanField, Prefetch
 
 from .models import Event, Registration
 from .serializers import (
@@ -60,7 +60,19 @@ class EventListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        queryset = Event.objects.all().order_by('date')
+        user = self.request.user
+        if user and user.is_authenticated:
+            is_registered_subquery = Exists(
+                Registration.objects.filter(event=OuterRef('pk'), user=user)
+            )
+        else:
+            is_registered_subquery = Value(False, output_field=BooleanField())
+
+        queryset = Event.objects.annotate(
+            annotated_registered_count=Count('registrations', distinct=True),
+            annotated_is_registered=is_registered_subquery
+        ).order_by('date')
+
         search_query = self.request.query_params.get('search', None)
         if search_query:
             queryset = queryset.filter(
@@ -69,10 +81,23 @@ class EventListView(generics.ListAPIView):
         return queryset
 
 class EventDetailView(generics.RetrieveAPIView):
-    queryset = Event.objects.all()
     serializer_class = EventSerializer
     permission_classes = [permissions.AllowAny]
     lookup_field = 'id'
+
+    def get_queryset(self):
+        user = self.request.user
+        if user and user.is_authenticated:
+            is_registered_subquery = Exists(
+                Registration.objects.filter(event=OuterRef('pk'), user=user)
+            )
+        else:
+            is_registered_subquery = Value(False, output_field=BooleanField())
+
+        return Event.objects.annotate(
+            annotated_registered_count=Count('registrations', distinct=True),
+            annotated_is_registered=is_registered_subquery
+        )
 
 class EventRegisterView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -92,4 +117,14 @@ class MyRegistrationsView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Registration.objects.filter(user=self.request.user).order_by('-registered_at')
+        user = self.request.user
+        is_registered_subquery = Exists(
+            Registration.objects.filter(event=OuterRef('pk'), user=user)
+        )
+        events_annotated = Event.objects.annotate(
+            annotated_registered_count=Count('registrations', distinct=True),
+            annotated_is_registered=is_registered_subquery
+        )
+        return Registration.objects.filter(user=user).prefetch_related(
+            Prefetch('event', queryset=events_annotated)
+        ).order_by('-registered_at')

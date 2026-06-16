@@ -37,9 +37,13 @@ class EventSerializer(serializers.ModelSerializer):
         fields = ('id', 'title', 'description', 'date', 'location', 'created_at', 'registered_count', 'is_registered')
 
     def get_registered_count(self, obj):
+        if hasattr(obj, 'annotated_registered_count'):
+            return obj.annotated_registered_count
         return obj.registrations.count()
 
     def get_is_registered(self, obj):
+        if hasattr(obj, 'annotated_is_registered'):
+            return obj.annotated_is_registered
         request = self.context.get('request')
         if request and request.user and request.user.is_authenticated:
             return obj.registrations.filter(user=request.user).exists()

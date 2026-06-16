@@ -1,7 +1,7 @@
 import React, { useContext, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { Calendar, LogOut, User as UserIcon } from 'lucide-react';
+import { Calendar, LogOut, User as UserIcon, Menu, X } from 'lucide-react';
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
@@ -9,6 +9,7 @@ const Navbar = () => {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('theme') || 'light';
   });
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const toggleTheme = () => {
     const nextTheme = theme === 'light' ? 'dark' : 'light';
@@ -29,52 +30,54 @@ const Navbar = () => {
   return (
     <nav className="navbar">
       <div className="nav-container">
-        <Link to="/" className="nav-logo">
+        <Link to="/" className="nav-logo" onClick={() => setMenuOpen(false)}>
           <Calendar size={20} />
           EventHub
         </Link>
 
-        <ul className="nav-links">
-          <li>
-            <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} end>
-              Events
-            </NavLink>
-          </li>
-          
-          {user ? (
-            <>
-              <li>
-                <NavLink to="/my-registrations" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                  My Registrations
-                </NavLink>
-              </li>
-              <li className="user-badge">
-                <UserIcon size={14} />
-                <span>{user.name}</span>
-              </li>
-              <li>
-                <button onClick={handleLogout} className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>
-                  <LogOut size={14} />
-                  Logout
-                </button>
-              </li>
-            </>
-          ) : (
-            <>
-              <li>
-                <NavLink to="/login" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                  Login
-                </NavLink>
-              </li>
-              <li>
-                <Link to="/register" className="btn btn-primary" style={{ padding: '0.4rem 0.9rem', fontSize: '0.85rem' }}>
-                  Sign Up
-                </Link>
-              </li>
-            </>
-          )}
-          
-          <li>
+        <div className="nav-right-group">
+          <ul className={`nav-links ${menuOpen ? 'open' : ''}`} onClick={() => setMenuOpen(false)}>
+            <li>
+              <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} end>
+                Events
+              </NavLink>
+            </li>
+            
+            {user ? (
+              <>
+                <li>
+                  <NavLink to="/my-registrations" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                    My Registrations
+                  </NavLink>
+                </li>
+                <li className="user-badge">
+                  <UserIcon size={14} />
+                  <span>{user.name}</span>
+                </li>
+                <li>
+                  <button onClick={handleLogout} className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>
+                    <LogOut size={14} />
+                    Logout
+                  </button>
+                </li>
+              </>
+            ) : (
+              <>
+                <li>
+                  <NavLink to="/login" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                    Login
+                  </NavLink>
+                </li>
+                <li>
+                  <Link to="/register" className="btn btn-primary" style={{ padding: '0.4rem 0.9rem', fontSize: '0.85rem' }}>
+                    Sign Up
+                  </Link>
+                </li>
+              </>
+            )}
+          </ul>
+
+          <div className="nav-actions">
             <button 
               onClick={toggleTheme} 
               className="theme-toggle-btn" 
@@ -83,8 +86,17 @@ const Navbar = () => {
             >
               {theme === 'light' ? '🌙' : '☀️'}
             </button>
-          </li>
-        </ul>
+
+            <button 
+              className="menu-toggle" 
+              onClick={() => setMenuOpen(!menuOpen)}
+              aria-label="Toggle menu"
+              aria-expanded={menuOpen}
+            >
+              {menuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
+        </div>
       </div>
     </nav>
   );
